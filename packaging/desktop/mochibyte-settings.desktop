@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.5
+Type=Application
+Name=Mochibyte settings
+GenericName=Settings
+Comment=Configure the Mochibyte desktop shell
+Exec=mochibyte settings
+Icon=mochibyte-settings
+Terminal=false
+Categories=Settings;DesktopSettings;
+Keywords=mochibyte;settings;preferences;theme;shell;
+StartupWMClass=mochibyte-settings

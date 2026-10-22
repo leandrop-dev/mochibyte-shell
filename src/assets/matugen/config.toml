@@ -1,0 +1,14 @@
+[config]
+reload_apps = false
+
+[templates.quickshell]
+input_path = "templates/mochibyte_matugen_colors.json.template"
+output_path = "~/.local/state/mochibyte/qs_colors.json"
+
+[templates.kitty]
+input_path = "templates/kitty-colors.conf.template"
+output_path = "~/.config/kitty/colors.conf"
+
+[templates.cava]
+input_path = "templates/cava-colors.ini.template"
+output_path = "~/.config/cava/config"
