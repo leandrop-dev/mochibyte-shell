@@ -61,11 +61,18 @@ run_installer_ui
 
 TARGET_COMMIT=$(get_target_commit "$PROJECT_ROOT" "$REPO_SLUG")
 
+ui_step "$(t "installer.ui.step_packages")"
 install_dependencies "$INSTALL_STATE" "$IS_REINSTALL"
 
+ui_step "$(t "installer.ui.step_deploy")"
 deploy_package "$PROJECT_ROOT" "$OLD_COMMIT" "$TARGET_COMMIT" "$IS_REINSTALL" "$INSTALL_STATE"
+
+if [ "$OPT_SDDM" = true ]; then
+    ui_step "$(t "installer.ui.step_login")"
+fi
 setup_sddm "$PROJECT_ROOT" "$INSTALL_STATE" "$IS_REINSTALL"
 
+ui_step "$(t "installer.ui.step_finish")"
 WALLPAPER_DIR=$(get_wallpaper_dir)
 mkdir -p "$WALLPAPER_DIR"
 init_mochibyte_config "$PROJECT_ROOT" "$WALLPAPER_DIR" "$INSTALL_STATE" "$IS_REINSTALL"

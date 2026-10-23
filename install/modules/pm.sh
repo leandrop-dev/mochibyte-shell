@@ -2,7 +2,7 @@
 
 PM_SDDM_WAYLAND_DEFAULT=false
 
-PM_BOOTSTRAP_TOOLS=(fzf jq curl git pciutils unzip fontconfig base-devel)
+PM_BOOTSTRAP_TOOLS=(gum jq curl git pciutils unzip fontconfig base-devel)
 
 pm_prepare_repos() {
     if [ -f /etc/pacman.conf ]; then

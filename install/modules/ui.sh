@@ -1,16 +1,41 @@
 #!/usr/bin/env bash
 
-RESET=$'\e[0m'
-BOLD=$'\e[1m'
-DIM=$'\e[2m'
-C_BLUE=$'\e[34m'
-C_CYAN=$'\e[36m'
-C_GREEN=$'\e[32m'
-C_YELLOW=$'\e[33m'
-C_RED=$'\e[31m'
-C_MAGENTA=$'\e[35m'
+# Installer interface, built on Charm's gum. Works in a desktop terminal and on a bare TTY.
 
 IS_REINSTALL=false
+
+# Palette: lipgloss downgrades these automatically on terminals with fewer colours.
+UI_ACCENT="#F5A3C7"
+UI_ACCENT_ALT="#9AD9C2"
+UI_TEXT="#E6E1F0"
+UI_MUTED="#8E8AA0"
+UI_WARN="#F2CD8C"
+UI_ERROR="#F28FAD"
+UI_OK="#A6E3A1"
+
+# The Linux console font lacks rounded corners and check marks, so fall back to plain glyphs there.
+if [ "${TERM:-}" = "linux" ]; then
+    UI_BORDER="normal"
+    UI_CHECK="[x] "
+    UI_UNCHECK="[ ] "
+    UI_CURSOR="> "
+else
+    UI_BORDER="rounded"
+    UI_CHECK="✓ "
+    UI_UNCHECK="○ "
+    UI_CURSOR="› "
+fi
+
+export GUM_CHOOSE_CURSOR="$UI_CURSOR"
+export GUM_CHOOSE_CURSOR_PREFIX="$UI_UNCHECK"
+export GUM_CHOOSE_SELECTED_PREFIX="$UI_CHECK"
+export GUM_CHOOSE_UNSELECTED_PREFIX="$UI_UNCHECK"
+export GUM_CHOOSE_CURSOR_FOREGROUND="$UI_ACCENT"
+export GUM_CHOOSE_SELECTED_FOREGROUND="$UI_ACCENT_ALT"
+export GUM_CHOOSE_HEADER_FOREGROUND="$UI_MUTED"
+export GUM_CONFIRM_PROMPT_FOREGROUND="$UI_TEXT"
+export GUM_CONFIRM_SELECTED_BACKGROUND="$UI_ACCENT"
+export GUM_CONFIRM_SELECTED_FOREGROUND="#1E1E2E"
 
 detect_active_dm() {
     local dm
@@ -24,9 +49,9 @@ detect_active_dm() {
 
 CURRENT_DM="$(detect_active_dm)"
 
-# Keep the user's own login manager unless it is already the Mochibyte theme
-# or there is none; the SDDM menu lets them switch either way.
-if [ -f /etc/sddm.conf.d/10-material-you.conf ] || [ -z "$CURRENT_DM" ]; then
+# Keep the user's own login manager unless it is already the Mochibyte login screen
+# or there is none; the login screen menu lets them switch either way.
+if [ -f /etc/sddm.conf.d/10-mochibyte.conf ] || [ -z "$CURRENT_DM" ]; then
     OPT_SDDM=true
 else
     OPT_SDDM=false
@@ -41,472 +66,361 @@ CPU_INFO=$(grep -m 1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xarg
 [[ -z "$CPU_INFO" ]] && CPU_INFO="$(t "installer.os.unknown_cpu")"
 
 GPU_RAW=$(lspci -nn 2>/dev/null | grep -iE 'vga|3d|display' || true)
-GPU_INFO=$(echo "$GPU_RAW" | cut -d: -f3 | sed -E 's/ \(rev [0-9a-f]+\)//g' | xargs)
+GPU_INFO=$(echo "$GPU_RAW" | sed -E 's/^[^]]*\]: //; s/ \[[0-9a-f]{4}:[0-9a-f]{4}\]//; s/ \(rev [0-9a-f]+\)//' | paste -sd, - | sed 's/,/, /g')
 [[ -z "$GPU_INFO" ]] && GPU_INFO="$(t "installer.os.unknown_gpu")"
 
-cleanup_terminal() {
-    printf "\e[?25h" 2>/dev/null || true
-    stty echo icanon 2>/dev/null || true
+ui_label() {
+    gum style --foreground "$UI_MUTED" -- "$1"
 }
-trap cleanup_terminal EXIT INT TERM
 
-read_key() {
-    local key=""
-    local rest=""
-    IFS= read -rsn1 key 2>/dev/null
-    if [[ "$key" == $'\x1b' ]]; then
-        read -rsn2 -t 0.05 rest 2>/dev/null
-        if [[ "$rest" == "[A" || "$rest" == "OA" ]]; then
-            echo "UP"
-            return
-        elif [[ "$rest" == "[B" || "$rest" == "OB" ]]; then
-            echo "DOWN"
-            return
-        elif [[ "$rest" == "[C" || "$rest" == "OC" ]]; then
-            echo "RIGHT"
-            return
-        elif [[ "$rest" == "[D" || "$rest" == "OD" ]]; then
-            echo "LEFT"
-            return
-        elif [[ "$rest" == *"["* ]]; then
-            local trailing=""
-            while read -rsn1 -t 0.05 trailing 2>/dev/null; do
-                [[ -z "$trailing" ]] && break
-            done
-            echo "ESC"
-            return
-        elif [[ -z "$rest" ]]; then
-            echo "ESC"
-            return
-        fi
-        echo "ESC"
-        return
-    elif [[ -z "$key" || "$key" == $'\n' || "$key" == $'\r' ]]; then
-        echo "ENTER"
-        return
-    elif [[ "$key" == " " ]]; then
-        echo "SPACE"
-        return
-    fi
-    echo "$key"
+ui_value() {
+    gum style --foreground "$UI_TEXT" --bold -- "$1"
+}
+
+# Two-column "label  value" row for the info and review cards.
+ui_row() {
+    gum join --horizontal "$(gum style --width 16 --foreground "$UI_MUTED" -- "$1")" "$(gum style --foreground "$UI_TEXT" -- "$2")"
+}
+
+ui_card_width() {
+    local cols
+    cols=$(tput cols 2>/dev/null || echo 80)
+    [ "$cols" -gt 92 ] && cols=92
+    echo $(( cols - 4 ))
+}
+
+ui_card() {
+    local title="$1"
+    shift
+    gum style --border "$UI_BORDER" --border-foreground "$UI_ACCENT" --padding "0 2" --margin "0 1" \
+        --width "$(ui_card_width)" \
+        "$(gum style --foreground "$UI_ACCENT" --bold -- "$title")" "" "$@"
+}
+
+ui_step() {
+    echo
+    gum style --foreground "$UI_ACCENT" --bold -- "━━ $1"
 }
 
 draw_banner() {
-    clear
-    printf "%s%s" "$BOLD" "$C_CYAN"
-    cat << "BANNER"
+    gum style --foreground "$UI_ACCENT" --bold --margin "1 1 0 1" -- "$(cat << "BANNER"
 ███╗   ███╗ ██████╗  ██████╗██╗  ██╗██╗██████╗ ██╗   ██╗████████╗███████╗
 ████╗ ████║██╔═══██╗██╔════╝██║  ██║██║██╔══██╗╚██╗ ██╔╝╚══██╔══╝██╔════╝
-██╔████╔██║██║   ██║██║     ███████║██║██████╔╝ ╚████╔╝    ██║   █████╗  
-██║╚██╔╝██║██║   ██║██║     ██╔══██║██║██╔══██╗  ╚██╔╝     ██║   ██╔══╝  
+██╔████╔██║██║   ██║██║     ███████║██║██████╔╝ ╚████╔╝    ██║   █████╗
+██║╚██╔╝██║██║   ██║██║     ██╔══██║██║██╔══██╗  ╚██╔╝     ██║   ██╔══╝
 ██║ ╚═╝ ██║╚██████╔╝╚██████╗██║  ██║██║██████╔╝   ██║      ██║   ███████╗
 ╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚═╝╚═════╝    ╚═╝      ╚═╝   ╚══════╝
 BANNER
-    printf "%s\n" "$RESET"
+)"
+    gum style --foreground "$UI_MUTED" --italic --margin "0 2 1 2" -- "$(t "installer.ui.tagline")  ·  github.com/${REPO_SLUG}"
+}
 
-    local OSC8_GH=$'\e]8;;https://github.com/'"${REPO_SLUG}"$'\a'
-    local OSC8_END=$'\e]8;;\a'
+install_mode_label() {
+    if [[ "$INSTALL_STATE" == "current" ]]; then
+        t "installer.ui.mode_current"
+    else
+        t "installer.ui.mode_fresh"
+    fi
+}
 
-    printf "\033[K%s--------------------------------------------------------------------------------%s\n" "$C_BLUE" "$RESET"
-    printf "\033[K%s%s $(t "installer.ui.github")%s   %shttps://github.com/%s%s\n" "$BOLD" "$C_GREEN" "$RESET" "$OSC8_GH" "$REPO_SLUG" "$OSC8_END"
-    printf "\033[K%s--------------------------------------------------------------------------------%s\n" "$C_BLUE" "$RESET"
-    printf "\033[K%s $(t "installer.ui.user")%s %-25s | %s$(t "installer.ui.os")%s %s\n" "$BOLD" "$RESET" "$USER_NAME" "$BOLD" "$RESET" "$OS_NAME"
-    printf "\033[K%s $(t "installer.ui.cpu")%s  %-25s | %s$(t "installer.ui.gpu")%s %s\n" "$BOLD" "$RESET" "$CPU_INFO" "$BOLD" "$RESET" "$GPU_INFO"
-    printf "\033[K%s--------------------------------------------------------------------------------%s\n" "$C_BLUE" "$RESET"
-    printf "\033[K%s $(t "installer.ui.target_commit")%s %-18s | %s$(t "installer.ui.install_mode")%s %s\n" "$BOLD" "$RESET" "$TARGET_COMMIT" "$BOLD" "$RESET" "$INSTALL_STATE"
-    printf "\033[K%s================================================================================%s\n\n" "$C_BLUE" "$RESET"
+draw_system_card() {
+    ui_card "$(t "installer.ui.system_title")" \
+        "$(ui_row "$(t "installer.ui.user")" "$USER_NAME")" \
+        "$(ui_row "$(t "installer.ui.os")" "$OS_NAME")" \
+        "$(ui_row "$(t "installer.ui.cpu")" "$CPU_INFO")" \
+        "$(ui_row "$(t "installer.ui.gpu")" "$GPU_INFO")" \
+        "$(ui_row "$(t "installer.ui.target_commit")" "$TARGET_COMMIT")" \
+        "$(ui_row "$(t "installer.ui.install_mode")" "$(install_mode_label)")"
+}
+
+all_target_packages() {
+    printf '%s\n' "${REQUIRED_PKGS[@]}"
+    if [ "$OPT_SDDM" = true ]; then
+        sddm_packages
+    fi
+}
+
+missing_packages() {
+    local pkgs=()
+    mapfile -t pkgs < <(all_target_packages)
+    pm_missing_pkgs "${pkgs[@]}"
+}
+
+# Package counts only change with the login screen choice, so they are cached per choice.
+declare -A UI_PKG_COUNT_CACHE=()
+package_counts() {
+    if [ -z "${UI_PKG_COUNT_CACHE[$OPT_SDDM]}" ]; then
+        local total missing
+        total=$(all_target_packages | grep -c .)
+        missing=$(missing_packages | grep -c . || true)
+        UI_PKG_COUNT_CACHE[$OPT_SDDM]="$missing $total"
+    fi
+    echo "${UI_PKG_COUNT_CACHE[$OPT_SDDM]}"
+}
+
+selected_configs_text() {
+    local entry name label src_rel mode list=()
+    for entry in "${MANAGED_CONFIGS[@]}"; do
+        IFS='|' read -r name label src_rel mode <<< "$entry"
+        [ "${DEPLOY_CONFIGS[$name]}" = true ] && list+=("$label")
+    done
+    if [ ${#list[@]} -eq 0 ]; then
+        t "installer.ui.summary_configs_none"
+    else
+        local IFS=,
+        echo "${list[*]}" | sed 's/,/, /g'
+    fi
+}
+
+login_screen_text() {
+    if [ "$OPT_SDDM" = true ]; then
+        local server="X11"
+        [ "$SDDM_WAYLAND" = true ] && server="Wayland"
+        t "installer.ui.login_mochibyte" "server=$server"
+    elif [ -n "$CURRENT_DM" ]; then
+        t "installer.ui.login_keep" "dm=$CURRENT_DM"
+    else
+        t "installer.ui.login_none"
+    fi
+}
+
+draw_review_card() {
+    local missing total
+    read -r missing total <<< "$(package_counts)"
+
+    local rows=(
+        "$(ui_row "$(t "installer.ui.summary_packages")" "$(t "installer.ui.summary_packages_value" "missing=$missing" "total=$total")")"
+        "$(ui_row "$(t "installer.ui.summary_configs")" "$(selected_configs_text)")"
+        "$(ui_row "$(t "installer.ui.summary_login")" "$(login_screen_text)")"
+    )
+    if [ "$OPT_SDDM" = true ] && [ "$REPLACE_DM" = true ] && [ -n "$CURRENT_DM" ]; then
+        rows+=("$(ui_row "" "$(gum style --foreground "$UI_WARN" -- "$(t "installer.ui.summary_dm_disabled" "dm=$CURRENT_DM")")")")
+    fi
+    rows+=("$(ui_row "$(t "installer.ui.summary_backups")" "$(t "installer.ui.summary_backups_value")")")
+
+    ui_card "$(t "installer.ui.review_title")" "${rows[@]}"
 }
 
 show_package_overview() {
-    local target_list=("${REQUIRED_PKGS[@]}")
-    if [ "$OPT_SDDM" = true ]; then
-        local sddm_pkgs=()
-        mapfile -t sddm_pkgs < <(sddm_packages)
-        target_list+=("${sddm_pkgs[@]}")
-    fi
-
-    local missing_raw
-    missing_raw=$(pm_missing_pkgs "${target_list[@]}")
-
-    declare -A is_missing
+    declare -A is_missing=()
+    local p
     while IFS= read -r p; do
         [[ -n "$p" ]] && is_missing["$p"]=1
-    done <<< "$missing_raw"
+    done < <(missing_packages)
 
-    local overview_items=()
-    for pkg in "${target_list[@]}"; do
-        if [[ -n "${is_missing[$pkg]}" ]]; then
-            overview_items+=("$(t "installer.ui.package_missing" "pkg=$pkg")")
-        else
-            overview_items+=("$(t "installer.ui.package_installed" "pkg=$pkg")")
-        fi
-    done
-
-    cleanup_terminal
-    printf "%s\n" "${overview_items[@]}" | fzf \
-        --ansi \
-        --layout=reverse \
-        --border=rounded \
-        --margin=1,2 \
-        --height=25 \
-        --prompt="$(t "installer.ui.packages_prompt")" \
-        --header="$(t "installer.ui.packages_header")" > /dev/null || true
-    stty -echo icanon 2>/dev/null || true
-    printf "\e[?25l"
-}
-
-manage_sddm_menu() {
-    draw_banner
-    stty -echo 2>/dev/null || true
-    printf "\e[?25l"
-    printf "%s%s$(t "installer.ui.sddm_title")%s\n\n" "$BOLD" "$C_CYAN" "$RESET"
-
-    local current_dm="$CURRENT_DM"
-
-    if [ -n "$current_dm" ]; then
-        printf "$(t "installer.ui.sddm_detected_active" "dm=${BOLD}${C_YELLOW}%s${RESET}")\n\n" "$current_dm"
-    else
-        printf "%s\n\n" "$(t "installer.ui.sddm_detected_none")"
-    fi
-
-    local cursor=0
-    local rendered_lines=0
-
-    while true; do
-        local S_SDDM="${DIM}[Disabled]${RESET}"
-        local S_RDM="${DIM}[No]${RESET}"
-        local S_WAY="${DIM}[X11/Default]${RESET}"
-
-        [ "$OPT_SDDM" = true ] && S_SDDM="${C_GREEN}[Enabled]${RESET}"
-        [ "$REPLACE_DM" = true ] && S_RDM="${C_GREEN}[Yes]${RESET}"
-        [ "$SDDM_WAYLAND" = true ] && S_WAY="${C_GREEN}[Wayland]${RESET}"
-
-        local items=()
-        items+=("1. $(t "installer.ui.sddm_opt_install") $S_SDDM")
-        if [ -n "$current_dm" ] && [ "$current_dm" != "sddm" ]; then
-            items+=("2. $(t "installer.ui.sddm_opt_disable" "dm=$current_dm") $S_RDM")
-        fi
-        items+=("3. $(t "installer.ui.sddm_opt_wayland") $S_WAY")
-        items+=("4. ${BOLD}${C_GREEN}$(t "installer.ui.done")${RESET}")
-
-        if [ "$rendered_lines" -gt 0 ]; then
-            printf "\033[%dA" "$rendered_lines"
-        fi
-
-        for i in "${!items[@]}"; do
-            if [ "$i" -eq "$cursor" ]; then
-                printf "\r\033[K%s%s ▸ %s%s\n" "$BOLD" "$C_CYAN" "$RESET" "${items[$i]}"
+    {
+        gum style --foreground "$UI_ACCENT" --bold -- "$(t "installer.ui.packages_title")"
+        echo
+        while IFS= read -r p; do
+            [[ -z "$p" ]] && continue
+            if [[ -n "${is_missing[$p]}" ]]; then
+                gum style --foreground "$UI_WARN" -- "  + $(t "installer.ui.package_missing" "pkg=$p")"
             else
-                printf "\r\033[K    %s\n" "${items[$i]}"
+                gum style --foreground "$UI_MUTED" -- "    $(t "installer.ui.package_installed" "pkg=$p")"
             fi
-        done
-        rendered_lines=${#items[@]}
-
-        local key
-        key=$(read_key)
-
-        case "$key" in
-            UP|[kK])
-                if [ "$cursor" -gt 0 ]; then
-                    cursor=$(( cursor - 1 ))
-                else
-                    cursor=$(( ${#items[@]} - 1 ))
-                fi
-                ;;
-            DOWN|[jJ])
-                if [ "$cursor" -lt $(( ${#items[@]} - 1 )) ]; then
-                    cursor=$(( cursor + 1 ))
-                else
-                    cursor=0
-                fi
-                ;;
-            ENTER|SPACE)
-                local selected_str="${items[$cursor]}"
-                case "$selected_str" in
-                    *"1."*)
-                        OPT_SDDM=$([ "$OPT_SDDM" = true ] && echo false || echo true)
-                        if [ "$OPT_SDDM" = true ] && [ -n "$current_dm" ] && [ "$current_dm" != "sddm" ]; then
-                            REPLACE_DM=true
-                        elif [ "$OPT_SDDM" != true ]; then
-                            REPLACE_DM=false
-                        fi
-                        ;;
-                    *"2."*)
-                        REPLACE_DM=$([ "$REPLACE_DM" = true ] && echo false || echo true)
-                        ;;
-                    *"3."*)
-                        SDDM_WAYLAND=$([ "$SDDM_WAYLAND" = true ] && echo false || echo true)
-                        ;;
-                    *"4."*)
-                        break
-                        ;;
-                esac
-                ;;
-            ESC|[qQ])
-                break
-                ;;
-        esac
-    done
-}
-
-toggle_config() {
-    local name="$1"
-    if [ "${DEPLOY_CONFIGS[$name]}" = true ]; then
-        DEPLOY_CONFIGS[$name]=false
-    else
-        DEPLOY_CONFIGS[$name]=true
-    fi
-}
-
-selected_config_count() {
-    local count=0 name
-    for name in "${!DEPLOY_CONFIGS[@]}"; do
-        [ "${DEPLOY_CONFIGS[$name]}" = true ] && count=$(( count + 1 ))
-    done
-    echo "$count"
+        done < <(all_target_packages)
+    } | gum pager --soft-wrap
 }
 
 manage_configs_menu() {
-    draw_banner
-    stty -echo 2>/dev/null || true
-    printf "\e[?25l"
-    printf "%s%s$(t "installer.ui.configs_title")%s\n" "$BOLD" "$C_CYAN" "$RESET"
-    printf "%s\n" "$(t "installer.ui.configs_hint")"
-    printf "%s%s%s\n\n" "$DIM" "$(t "installer.ui.configs_backup_dir" "path=$BACKUP_ROOT")" "$RESET"
-
-    local cursor=0
-    local rendered_lines=0
-
-    while true; do
-        local items=()
-        local names=()
-        local entry name label src_rel mode
-        for entry in "${MANAGED_CONFIGS[@]}"; do
-            IFS='|' read -r name label src_rel mode <<< "$entry"
-            local mark="${DIM}[ ]${RESET}"
-            [ "${DEPLOY_CONFIGS[$name]}" = true ] && mark="${C_GREEN}[✓]${RESET}"
-            local state="${DIM}$(t "installer.ui.config_missing")${RESET}"
-            if [ -e "$HOME/.config/$name" ]; then
-                if [ "${DEPLOY_CONFIGS[$name]}" = true ]; then
-                    state="${C_YELLOW}$(t "installer.ui.config_backed_up")${RESET}"
-                else
-                    state="${DIM}$(t "installer.ui.config_kept")${RESET}"
-                fi
-            fi
-            items+=("$(( ${#items[@]} + 1 )). $mark $label  ${DIM}~/.config/$name${RESET}  $state")
-            names+=("$name")
-        done
-        items+=("$(( ${#items[@]} + 1 )). ${BOLD}${C_GREEN}$(t "installer.ui.done")${RESET}")
-
-        if [ "$rendered_lines" -gt 0 ]; then
-            printf "\033[%dA" "$rendered_lines"
+    local entry name label src_rel mode options=() selected=()
+    for entry in "${MANAGED_CONFIGS[@]}"; do
+        IFS='|' read -r name label src_rel mode <<< "$entry"
+        local state
+        if [ -e "$HOME/.config/$name" ]; then
+            state="$(t "installer.ui.config_exists")"
+        else
+            state="$(t "installer.ui.config_missing")"
         fi
-
-        for i in "${!items[@]}"; do
-            if [ "$i" -eq "$cursor" ]; then
-                printf "\r\033[K%s%s ▸ %s%s\n" "$BOLD" "$C_CYAN" "$RESET" "${items[$i]}"
-            else
-                printf "\r\033[K    %s\n" "${items[$i]}"
-            fi
-        done
-        rendered_lines=${#items[@]}
-
-        local key
-        key=$(read_key)
-
-        local pick=-1
-        case "$key" in
-            UP|[kK])
-                if [ "$cursor" -gt 0 ]; then
-                    cursor=$(( cursor - 1 ))
-                else
-                    cursor=$(( ${#items[@]} - 1 ))
-                fi
-                ;;
-            DOWN|[jJ])
-                if [ "$cursor" -lt $(( ${#items[@]} - 1 )) ]; then
-                    cursor=$(( cursor + 1 ))
-                else
-                    cursor=0
-                fi
-                ;;
-            [1-9])
-                pick=$(( key - 1 ))
-                ;;
-            ENTER|SPACE)
-                pick=$cursor
-                ;;
-            ESC|[qQ])
-                break
-                ;;
-        esac
-
-        if [ "$pick" -ge 0 ]; then
-            if [ "$pick" -lt "${#names[@]}" ]; then
-                toggle_config "${names[$pick]}"
-            elif [ "$pick" -eq "${#names[@]}" ]; then
-                break
-            fi
-        fi
+        local option_label
+        option_label="$(printf '%-10s %-22s %s' "$label" "~/.config/$name" "$state")"
+        options+=("$option_label|$name")
+        [ "${DEPLOY_CONFIGS[$name]}" = true ] && selected+=("$option_label")
     done
+
+    local selected_csv=""
+    if [ ${#selected[@]} -gt 0 ]; then
+        selected_csv="$(IFS=,; echo "${selected[*]}")"
+    fi
+
+    local picked
+    if ! picked=$(gum choose --no-limit --label-delimiter="|" --selected="$selected_csv" \
+        --header="$(t "installer.ui.configs_header")" "${options[@]}"); then
+        return 0
+    fi
+
+    for entry in "${MANAGED_CONFIGS[@]}"; do
+        DEPLOY_CONFIGS["${entry%%|*}"]=false
+    done
+    while IFS= read -r name; do
+        [[ -n "$name" ]] && DEPLOY_CONFIGS[$name]=true
+    done <<< "$picked"
 }
 
-# Returns 0 to proceed with the install, 1 to redraw the menu.
-run_menu_action() {
-    local action="$1"
-    case "$action" in
-        overview)
-            show_package_overview
-            return 1
-            ;;
-        configs)
-            manage_configs_menu
-            return 1
-            ;;
-        sddm)
-            manage_sddm_menu
-            return 1
-            ;;
-        install|update)
-            IS_REINSTALL=false
-            cleanup_terminal
+manage_sddm_menu() {
+    local keep_label use_label
+    if [ -n "$CURRENT_DM" ]; then
+        keep_label="$(t "installer.ui.sddm_keep" "dm=$CURRENT_DM")"
+    else
+        keep_label="$(t "installer.ui.sddm_keep_none")"
+    fi
+    use_label="$(t "installer.ui.sddm_use")"
+
+    local current_label="$keep_label"
+    [ "$OPT_SDDM" = true ] && current_label="$use_label"
+
+    local choice
+    if ! choice=$(gum choose --label-delimiter="|" --selected="$current_label" \
+        --header="$(t "installer.ui.sddm_header")" "$keep_label|keep" "$use_label|mochibyte"); then
+        return 0
+    fi
+
+    if [ "$choice" != "mochibyte" ]; then
+        OPT_SDDM=false
+        REPLACE_DM=false
+        return 0
+    fi
+
+    if [ -n "$CURRENT_DM" ] && [ "$CURRENT_DM" != "sddm" ]; then
+        if gum confirm --default=true "$(t "installer.ui.sddm_replace_confirm" "dm=$CURRENT_DM")"; then
+            REPLACE_DM=true
+        else
+            OPT_SDDM=false
+            REPLACE_DM=false
             return 0
-            ;;
-        reinstall)
-            IS_REINSTALL=true
-            cleanup_terminal
-            return 0
-            ;;
-        exit)
-            cleanup_terminal
-            clear
-            exit 0
-            ;;
-    esac
-    return 1
+        fi
+    fi
+    OPT_SDDM=true
+
+    local x11_label wayland_label server_current
+    x11_label="$(t "installer.ui.sddm_server_x11")"
+    wayland_label="$(t "installer.ui.sddm_server_wayland")"
+    server_current="$x11_label"
+    [ "$SDDM_WAYLAND" = true ] && server_current="$wayland_label"
+
+    local server
+    if server=$(gum choose --label-delimiter="|" --selected="$server_current" \
+        --header="$(t "installer.ui.sddm_server_header")" "$x11_label|x11" "$wayland_label|wayland"); then
+        if [ "$server" = "wayland" ]; then
+            SDDM_WAYLAND=true
+        else
+            SDDM_WAYLAND=false
+        fi
+    fi
+}
+
+confirm_start() {
+    local prompt affirm
+    if [[ "$1" == "update" ]]; then
+        prompt="$(t "installer.ui.confirm_update")"
+        affirm="$(t "installer.ui.menu_update")"
+    elif [[ "$1" == "reinstall" ]]; then
+        prompt="$(t "installer.ui.confirm_reinstall")"
+        affirm="$(t "installer.ui.menu_reinstall")"
+    else
+        prompt="$(t "installer.ui.confirm_install")"
+        affirm="$(t "installer.ui.menu_install")"
+    fi
+    gum confirm --default=true --affirmative="$affirm" --negative="$(t "installer.ui.confirm_back")" "$prompt"
 }
 
 run_installer_ui() {
-    local cursor=0
+    local last_choice=""
+    local header
+    header="$(draw_banner; draw_system_card)"
 
     while true; do
-        draw_banner
-        stty -echo 2>/dev/null || true
-        printf "\e[?25l"
+        local review
+        review="$(draw_review_card)"
+        clear
+        printf '%s\n\n%s\n' "$header" "$review"
+        echo
 
-        local rendered_lines=0
+        local options=()
+        if [[ "$INSTALL_STATE" == "current" ]]; then
+            options+=("$(t "installer.ui.menu_update")|update")
+            options+=("$(t "installer.ui.menu_reinstall")|reinstall")
+        else
+            options+=("$(t "installer.ui.menu_install")|install")
+        fi
+        options+=("$(t "installer.ui.menu_configs")|configs")
+        options+=("$(t "installer.ui.menu_sddm")|sddm")
+        options+=("$(t "installer.ui.menu_packages")|packages")
+        options+=("$(t "installer.ui.menu_exit")|exit")
 
-        while true; do
-            local S_SDDM="${DIM}[$(t "installer.ui.sddm_keep_current")${CURRENT_DM:+: $CURRENT_DM}]${RESET}"
-            [ "$OPT_SDDM" = true ] && S_SDDM="${C_GREEN}[$(t "installer.ui.sddm_use_mochibyte")]${RESET}"
-
-            local items=()
-            local actions=()
-            items+=("1. $(t "installer.ui.menu_overview" "count=${#REQUIRED_PKGS[@]}")"); actions+=("overview")
-            items+=("2. $(t "installer.ui.menu_configs" "selected=$(selected_config_count)" "total=${#MANAGED_CONFIGS[@]}")"); actions+=("configs")
-            items+=("3. $(t "installer.ui.menu_sddm") $S_SDDM"); actions+=("sddm")
-
-            if [[ "$INSTALL_STATE" == "current" ]]; then
-                items+=("4. ${BOLD}${C_GREEN}$(t "installer.ui.menu_update")${RESET}"); actions+=("update")
-                items+=("5. ${BOLD}${C_YELLOW}$(t "installer.ui.menu_reinstall")${RESET}"); actions+=("reinstall")
-                items+=("6. ${DIM}$(t "installer.ui.menu_exit")${RESET}"); actions+=("exit")
-            else
-                items+=("4. ${BOLD}${C_GREEN}$(t "installer.ui.menu_install")${RESET}"); actions+=("install")
-                items+=("5. ${DIM}$(t "installer.ui.menu_exit")${RESET}"); actions+=("exit")
-            fi
-
-            if [ "$rendered_lines" -gt 0 ]; then
-                printf "\033[%dA" "$rendered_lines"
-            fi
-
-            for i in "${!items[@]}"; do
-                if [ "$i" -eq "$cursor" ]; then
-                    printf "\r\033[K%s%s ▸ %s%s\n" "$BOLD" "$C_CYAN" "$RESET" "${items[$i]}"
-                else
-                    printf "\r\033[K    %s\n" "${items[$i]}"
-                fi
+        local cursor_label=""
+        if [ -n "$last_choice" ]; then
+            local opt
+            for opt in "${options[@]}"; do
+                [[ "${opt##*|}" == "$last_choice" ]] && cursor_label="${opt%|*}"
             done
-            rendered_lines=${#items[@]}
+        fi
 
-            local key
-            key=$(read_key)
+        local choice
+        if ! choice=$(gum choose --label-delimiter="|" --selected="$cursor_label" \
+            --header="$(t "installer.ui.menu_header")" "${options[@]}"); then
+            choice="exit"
+        fi
+        last_choice="$choice"
 
-            local selected=""
-            case "$key" in
-                UP|[kK])
-                    if [ "$cursor" -gt 0 ]; then
-                        cursor=$(( cursor - 1 ))
-                    else
-                        cursor=$(( ${#items[@]} - 1 ))
-                    fi
-                    ;;
-                DOWN|[jJ])
-                    if [ "$cursor" -lt $(( ${#items[@]} - 1 )) ]; then
-                        cursor=$(( cursor + 1 ))
-                    else
-                        cursor=0
-                    fi
-                    ;;
-                [1-9])
-                    if [ "$key" -le "${#items[@]}" ]; then
-                        selected="${actions[$(( key - 1 ))]}"
-                    fi
-                    ;;
-                ENTER|SPACE)
-                    selected="${actions[$cursor]}"
-                    ;;
-                ESC|[qQ])
-                    selected="exit"
-                    ;;
-            esac
-
-            if [ -n "$selected" ]; then
-                run_menu_action "$selected" && return 0
-                break
-            fi
-        done
+        case "$choice" in
+            install|update|reinstall)
+                # Configs are only placed on a fresh install or a reinstall.
+                if [[ "$choice" == "update" ]]; then
+                    IS_REINSTALL=false
+                elif [[ "$choice" == "reinstall" ]]; then
+                    IS_REINSTALL=true
+                fi
+                if confirm_start "$choice"; then
+                    clear
+                    return 0
+                fi
+                ;;
+            configs)
+                manage_configs_menu
+                ;;
+            sddm)
+                manage_sddm_menu
+                ;;
+            packages)
+                show_package_overview
+                ;;
+            exit)
+                clear
+                exit 0
+                ;;
+        esac
     done
 }
 
 draw_completion_screen() {
     local target_commit="$1"
-    cleanup_terminal
-    clear 2>/dev/null || true
-    printf "%s%s" "$BOLD" "$C_GREEN"
-    cat << "EOF2"
- ___ _  _ ___ _____ _   _     _ _____ ___ ___  _  _    ___ ___  __  __ ___ _    ___ _____ ___ 
-|_ _| \| / __|_   _/_\ | |   /_\_   _|_ _/ _ \| \| |  / __/ _ \ | \/  | _ \ |  | __|_   _| __|
- | || .` \__ \ | |/ _ \| |__| _ \| |  | | (_) | .` | | (_| (_) | |\/| |  _/ |__| _|  | | | _| 
-|___|_|\_|___/ |_/_/ \_\____/_/ \_\_| |___\___/|_|\_|  \___\___/|_|  |_|_| |____|___| |_| |___|
-EOF2
-    printf "%s\n\n" "$RESET"
-    printf "%s%s  %s%s\n\n" "$BOLD" "$C_CYAN" "$(t "installer.ui.tagline")" "$RESET"
-    printf "%s%s%s\n" "$C_GREEN" "$(t "installer.ui.installed_success" "commit=$target_commit")" "$RESET"
+    echo
+    local lines=(
+        "$(gum style --foreground "$UI_OK" --bold -- "$(t "installer.ui.installed_success" "commit=$target_commit")")"
+        ""
+        "$(gum style --foreground "$UI_TEXT" -- "$(t "installer.ui.restart_prompt")")"
+    )
+
     if [ -d "$BACKUP_ROOT" ]; then
-        printf "\n%s\n" "$(t "installer.ui.backups_saved" "path=$BACKUP_ROOT")"
+        lines+=("" "$(ui_label "$(t "installer.ui.backups_saved" "path=${BACKUP_ROOT/#$HOME/\~}")")")
         if [ -f "$BACKUP_ROOT/disabled-display-managers.txt" ]; then
-            printf "%s\n" "$(t "installer.ui.dm_disabled_note" "dms=$(paste -sd, "$BACKUP_ROOT/disabled-display-managers.txt")")"
+            lines+=("$(gum style --foreground "$UI_WARN" -- "$(t "installer.ui.dm_disabled_note" "dms=$(paste -sd, "$BACKUP_ROOT/disabled-display-managers.txt")")")")
         fi
     fi
+
     if [ ${#FAILED_PKGS[@]} -gt 0 ]; then
-        printf "\n%s%s%s%s\n" "$BOLD" "$C_RED" "$(t "installer.ui.failed_packages")" "$RESET"
+        lines+=("" "$(gum style --foreground "$UI_ERROR" --bold -- "$(t "installer.ui.failed_packages")")")
+        local fp
         for fp in "${FAILED_PKGS[@]}"; do
-            printf "  - %s%s%s\n" "$C_YELLOW" "$fp" "$RESET"
+            lines+=("$(gum style --foreground "$UI_WARN" -- "  • $fp")")
         done
     fi
-    printf "\n%s\n\n" "$(t "installer.ui.restart_prompt")"
 
-    local restart_choice=""
-    local prompt_msg
-    prompt_msg="$(t "installer.ui.ask_reboot")"
+    gum style --border "$UI_BORDER" --border-foreground "$UI_OK" --padding "1 2" --margin "0 1" --width "$(ui_card_width)" "${lines[@]}"
+    echo
 
-    if [ -t 0 ]; then
-        read -r -p "$prompt_msg" restart_choice
-    elif [ -e /dev/tty ]; then
-        read -r -p "$prompt_msg" restart_choice < /dev/tty
-    fi
-
-    if [[ "$restart_choice" =~ ^[Yy]$ ]]; then
+    if gum confirm --default=false "$(t "installer.ui.confirm_reboot")"; then
         sudo reboot now
     fi
 }

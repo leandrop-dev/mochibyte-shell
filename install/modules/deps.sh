@@ -182,7 +182,7 @@ sddm_has_xorg() {
 }
 
 sddm_packages() {
-    printf '%s\n' sddm qt6-declarative qt6-svg
+    printf '%s\n' sddm qt6-declarative qt6-svg qt6-virtualkeyboard qt6-multimedia-ffmpeg
     if [ "$SDDM_WAYLAND" = true ] \
         && ! find_sddm_binary kwin_wayland >/dev/null \
         && ! find_sddm_binary weston >/dev/null \

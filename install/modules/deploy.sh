@@ -17,6 +17,29 @@ unset _entry
 
 BACKUP_ROOT="${XDG_STATE_HOME:-$HOME/.local/state}/mochibyte/backups/$(date +%Y%m%d_%H%M%S)"
 
+# Installed under its own name so an AUR copy of sddm-astronaut-theme is never overwritten.
+SDDM_THEME_NAME="mochibyte-astronaut"
+SDDM_THEME_DEST="/usr/share/sddm/themes/$SDDM_THEME_NAME"
+SDDM_FONT_DEST="/usr/share/fonts/$SDDM_THEME_NAME"
+
+# Display managers switch on the next boot: starting or stopping one now would end the running session.
+set_display_manager_enabled() {
+    local dm="$1"
+    local enabled="$2"
+    local init_sys="$3"
+    if [ "$init_sys" = "systemd" ]; then
+        if [ "$enabled" = true ]; then
+            sudo systemctl enable "$dm.service" || true
+        else
+            sudo systemctl disable "$dm.service" || true
+        fi
+    elif [ "$enabled" = true ]; then
+        enable_system_service "$dm" "$init_sys"
+    else
+        disable_system_service "$dm" "$init_sys"
+    fi
+}
+
 # Copies a file or directory into this run's backup folder before it gets replaced.
 # Returns non-zero when the copy fails, so the caller leaves the original untouched.
 backup_path() {
@@ -64,7 +87,10 @@ deploy_managed_config() {
         return 0
     fi
 
-    backup_path "$dest" "config/$name" || return 0
+    if ! backup_path "$dest" "config/$name"; then
+        DEPLOY_CONFIGS[$name]=false
+        return 0
+    fi
 
     mkdir -p "$dest"
     cp -r "$src/." "$dest/"
@@ -172,6 +198,7 @@ setup_sddm() {
 
     if ! backup_path /etc/sddm.conf "sddm/sddm.conf" true \
         || ! backup_path /etc/sddm.conf.d "sddm/sddm.conf.d" true \
+        || ! backup_path "$SDDM_THEME_DEST" "sddm/themes/$SDDM_THEME_NAME" true \
         || ! backup_path /usr/share/sddm/themes/material-you "sddm/themes/material-you" true \
         || ! backup_path /usr/share/sddm/themes/matugen-minimal "sddm/themes/matugen-minimal" true; then
         echo -e "  \e[33m[ WARN ]\e[0m $(t "installer.deploy.sddm_backup_skipped")" >&2
@@ -183,7 +210,7 @@ setup_sddm() {
         for dm in "${dms[@]}"; do
             pm_is_installed "$dm" || continue
             echo "  $(t "installer.deploy.disabling_dm" "dm=$dm")"
-            disable_system_service "$dm" "$init_sys"
+            set_display_manager_enabled "$dm" false "$init_sys"
             mkdir -p "$BACKUP_ROOT"
             echo "$dm" >> "$BACKUP_ROOT/disabled-display-managers.txt"
         done
@@ -191,23 +218,26 @@ setup_sddm() {
 
     sudo rm -rf /usr/share/sddm/themes/matugen-minimal
     sudo rm -rf /usr/share/sddm/themes/material-you
+    sudo rm -rf "$SDDM_THEME_DEST"
     sudo rm -f /etc/sddm.conf.d/*matugen*.conf
     sudo rm -f /etc/sddm.conf.d/*material-you*.conf
+    sudo rm -f /etc/sddm.conf.d/*mochibyte*.conf
 
     if [ "$is_update" != true ]; then
         sudo rm -f /etc/sddm.conf
     fi
 
-    local sddm_theme_src="$project_root/config/sddm/themes/material-you"
-    local sddm_theme_dest="/usr/share/sddm/themes/material-you"
+    local sddm_theme_src="$project_root/config/sddm/themes/sddm-astronaut-theme"
 
     if [ -d "$sddm_theme_src" ]; then
-        sudo mkdir -p "$sddm_theme_dest"
-        sudo cp -r "$sddm_theme_src/." "$sddm_theme_dest/"
-        sudo chmod -R 755 "$sddm_theme_dest"
-        if [ -d "$sddm_theme_src/font" ]; then
-            sudo mkdir -p /usr/share/fonts/TTF
-            sudo cp -r "$sddm_theme_src/font/"*.ttf /usr/share/fonts/TTF/ 2>/dev/null || true
+        sudo mkdir -p "$SDDM_THEME_DEST"
+        sudo cp -r "$sddm_theme_src/." "$SDDM_THEME_DEST/"
+        sudo chmod -R 755 "$SDDM_THEME_DEST"
+        sudo sed -i "s|^ConfigFile=.*|ConfigFile=Themes/astronaut.conf|" "$SDDM_THEME_DEST/metadata.desktop"
+        if [ -d "$sddm_theme_src/Fonts" ]; then
+            # A dedicated folder, so fonts owned by packages (e.g. ttf-opensans) are never overwritten.
+            sudo mkdir -p "$SDDM_FONT_DEST"
+            sudo cp -r "$sddm_theme_src/Fonts/." "$SDDM_FONT_DEST/"
             fc-cache -f /usr/share/fonts >/dev/null 2>&1 || true
         fi
     fi
@@ -215,58 +245,32 @@ setup_sddm() {
     sudo mkdir -p /etc/sddm.conf.d
 
     if [ "$sddm_display_server" = "wayland" ]; then
-        cat <<EOF | sudo tee /etc/sddm.conf.d/10-material-you.conf > /dev/null
+        cat <<EOT | sudo tee /etc/sddm.conf.d/10-mochibyte.conf > /dev/null
 [Theme]
-Current=material-you
+Current=$SDDM_THEME_NAME
 ThemeDir=/usr/share/sddm/themes
 
 [General]
 DisplayServer=wayland
 GreeterEnvironment=QT_WAYLAND_DISABLE_WINDOWDECORATION=1
-InputMethod=
+InputMethod=qtvirtualkeyboard
 
 [Wayland]
 CompositorCommand=$sddm_compositor_cmd
-EOF
+EOT
     else
-        cat <<EOF | sudo tee /etc/sddm.conf.d/10-material-you.conf > /dev/null
+        cat <<EOT | sudo tee /etc/sddm.conf.d/10-mochibyte.conf > /dev/null
 [Theme]
-Current=material-you
+Current=$SDDM_THEME_NAME
 ThemeDir=/usr/share/sddm/themes
 
 [General]
 DisplayServer=x11
-InputMethod=
-EOF
+InputMethod=qtvirtualkeyboard
+EOT
     fi
 
-    if declare -f enable_system_service >/dev/null; then
-        enable_system_service "sddm" "$init_sys"
-    else
-        case "$init_sys" in
-            systemd)
-                sudo systemctl enable --now sddm.service 2>/dev/null || sudo systemctl enable -f sddm.service 2>/dev/null || sudo systemctl enable sddm 2>/dev/null || true
-                ;;
-            openrc)
-                sudo rc-update add sddm default 2>/dev/null || true
-                sudo rc-service sddm start 2>/dev/null || true
-                ;;
-            dinit)
-                sudo dinitctl enable sddm 2>/dev/null || sudo dinitctl start sddm 2>/dev/null || true
-                ;;
-            runit)
-                if [ -d "/etc/sv/sddm" ]; then
-                    sudo ln -sf "/etc/sv/sddm" /var/service/ 2>/dev/null || true
-                fi
-                ;;
-            s6)
-                sudo s6-rc-bundle-update -b add default sddm 2>/dev/null || true
-                ;;
-            *)
-                sudo systemctl enable sddm.service -f 2>/dev/null || true
-                ;;
-        esac
-    fi
+    set_display_manager_enabled sddm true "$init_sys"
 
     echo -e "  \e[32m$(t "installer.deploy.sddm_success")\e[0m"
 }
