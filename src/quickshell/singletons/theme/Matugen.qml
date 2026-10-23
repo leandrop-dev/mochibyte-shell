@@ -20,8 +20,39 @@ Item {
         }
         return dir;
     }
-    property string configPath: matugenBaseDir + "/config.toml"
-    property string configPathStatic: matugenBaseDir + "/config-static.toml"
+    readonly property string generatedConfigDir: Quickshell.env("HOME") + "/.local/state/mochibyte/matugen"
+
+    // Templates that write into the user's own app configs. Each one only runs when the
+    // installer placed that app's config (settings.managedConfigs.<app> === true).
+    readonly property var appTemplates: ({
+        "kitty": { input: "kitty-colors.conf.template", output: "~/.config/kitty/colors.conf" },
+        "cava": { input: "cava-colors.ini.template", output: "~/.config/cava/config" }
+    })
+
+    function _templateToml(name, input, output) {
+        return "[templates." + name + "]\n" +
+            "input_path = \"" + root.matugenBaseDir + "/templates/" + input + "\"\n" +
+            "output_path = \"" + output + "\"\n\n";
+    }
+
+    function _appTemplatesToml() {
+        let managed = Config.getSetting("managedConfigs", {}) || {};
+        let toml = "";
+        for (let app in root.appTemplates) {
+            if (managed[app] === true) {
+                toml += root._templateToml(app, root.appTemplates[app].input, root.appTemplates[app].output);
+            }
+        }
+        return toml;
+    }
+
+    function _buildConfigToml(includeShellColors) {
+        let toml = "[config]\nreload_apps = false\n\n";
+        if (includeShellColors) {
+            toml += root._templateToml("quickshell", "mochibyte_matugen_colors.json.template", "~/.local/state/mochibyte/qs_colors.json");
+        }
+        return toml + root._appTemplatesToml();
+    }
 
     property var _pendingRequest: null
     property string _currentReqType: ""
@@ -202,12 +233,15 @@ Item {
 
         matugenProcess.reqType = "image";
         matugenProcess.command = [
-            "nice", "-n", "15",
-            "matugen", "image", cleanPath,
-            "-c", root.configPath,
-            "-m", selectedMode,
-            "-t", selectedType,
-            "--source-color-index", "0"
+            "bash", "-c",
+            "mkdir -p \"$(dirname \"$1\")\" && printf '%s' \"$2\" > \"$1\" && " +
+            "exec nice -n 15 matugen image \"$3\" -c \"$1\" -m \"$4\" -t \"$5\" --source-color-index 0",
+            "matugen-image",
+            root.generatedConfigDir + "/config.toml",
+            root._buildConfigToml(true),
+            cleanPath,
+            selectedMode,
+            selectedType
         ];
         root.generationStarted();
         matugenProcess.running = true;
@@ -260,17 +294,29 @@ Item {
         let md3Obj = root.toMd3(colorsObj);
         let md3Json = JSON.stringify(md3Obj);
 
+        // Static themes write the shell colours directly; matugen only runs for opted-in app templates.
         let script =
             "STATE_DIR=\"$HOME/.local/state/mochibyte\"; " +
             "TMP_MD3=\"/tmp/matugen_synthetic_colors.json\"; " +
             "mkdir -p \"$STATE_DIR\" && " +
-            "echo '" + rawJson.replace(/'/g, "'\\''") + "' > \"$STATE_DIR/qs_colors.json\" && " +
-            "echo '" + md3Json.replace(/'/g, "'\\''") + "' > \"$TMP_MD3\" && " +
-            "cd \"" + root.matugenBaseDir + "\" && " +
-            "matugen -c \"" + root.configPathStatic + "\" json \"$TMP_MD3\"";
+            "printf '%s\\n' \"$1\" > \"$STATE_DIR/qs_colors.json\" && " +
+            "{ [ -z \"$4\" ] || { " +
+            "mkdir -p \"$(dirname \"$3\")\" && " +
+            "printf '%s\\n' \"$2\" > \"$TMP_MD3\" && " +
+            "printf '%s' \"$4\" > \"$3\" && " +
+            "matugen -c \"$3\" json \"$TMP_MD3\"; }; }";
+
+        let appToml = root._appTemplatesToml();
 
         matugenProcess.reqType = "static";
-        matugenProcess.command = ["bash", "-c", script];
+        matugenProcess.command = [
+            "bash", "-c", script,
+            "matugen-static",
+            rawJson,
+            md3Json,
+            root.generatedConfigDir + "/config-static.toml",
+            appToml !== "" ? root._buildConfigToml(false) : ""
+        ];
         root.generationStarted();
         matugenProcess.running = true;
     }

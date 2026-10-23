@@ -49,11 +49,26 @@ init_mochibyte_config() {
         fi
     fi
 
+    record_managed_configs
+
     if [[ "$is_reinstall" == "true" || "$install_state" == "fresh" ]]; then
         if [ -f "$script_path" ]; then
             bash "$script_path" --refresh >/dev/null 2>&1 || true
         elif [ -f "$HOME/.local/share/mochibyte/src/scripts/location.sh" ]; then
             bash "$HOME/.local/share/mochibyte/src/scripts/location.sh" --refresh >/dev/null 2>&1 || true
         fi
+    fi
+}
+
+# Remembers which app configs the installer placed, so the theme engine only
+# writes colours into configs the user handed over to the shell (see Matugen.qml).
+record_managed_configs() {
+    [ -f "$CONFIG_FILE" ] || return 0
+    local managed="{}" name updated
+    for name in "${!DEPLOY_CONFIGS[@]}"; do
+        managed=$(jq -c --arg n "$name" --argjson v "${DEPLOY_CONFIGS[$name]}" '. + {($n): $v}' <<< "$managed")
+    done
+    if updated=$(jq --argjson m "$managed" '.managedConfigs = $m' "$CONFIG_FILE") && [ -n "$updated" ]; then
+        echo "$updated" > "$CONFIG_FILE"
     fi
 }
