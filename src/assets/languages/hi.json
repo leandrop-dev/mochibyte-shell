@@ -1360,8 +1360,6 @@
     "title": "Mochibyte",
     "made_by": "@{author} द्वारा निर्मित",
     "welcome": "स्वागत है",
-    "tagline": "एक डेस्कटॉप शेल जो बना है",
-    "you": "आपके लिए",
     "start_preview": "पूर्वावलोकन शुरू करें"
   },
   "syspanel": {
@@ -1717,7 +1715,6 @@
       "menu_reinstall": "पुनः इंस्टॉल करें",
       "menu_install": "इंस्टॉल करें",
       "menu_exit": "बाहर निकलें",
-      "tagline": "एक डेस्कटॉप शेल जो आपके लिए बना है",
       "installed_success": "✔ Mochibyte ({commit}) सफलतापूर्वक इंस्टॉल हुआ।",
       "failed_packages": "इंस्टॉलेशन के दौरान निम्नलिखित पैकेजों में त्रुटियां आईं:",
       "restart_prompt": "शुरू करने के लिए अपने कंपोज़िटर को रीस्टार्ट करें या 'mochibyted start' चलाएं।"

@@ -1360,8 +1360,6 @@
     "title": "Mochibyte",
     "made_by": "Dibuat oleh @{author}",
     "welcome": "Selamat Datang",
-    "tagline": "Shell desktop yang dibangun untuk",
-    "you": "Anda",
     "start_preview": "Mulai pratinjau"
   },
   "syspanel": {
@@ -1717,7 +1715,6 @@
       "menu_reinstall": "Instal ulang",
       "menu_install": "Instal",
       "menu_exit": "Keluar",
-      "tagline": "Shell desktop yang dibangun untuk Anda",
       "installed_success": "✔ Mochibyte ({commit}) berhasil diinstal.",
       "failed_packages": "Paket-paket berikut mengalami kesalahan saat instalasi:",
       "restart_prompt": "Mulai ulang kompositor Anda atau jalankan 'mochibyted start' untuk memulai."

@@ -46,9 +46,4 @@ fi
 
 qs_ensure_cache "focustime"
 
-if [ ! -f "$QS_STATE_DIR/version" ]; then
-    commit="$(git -C "$(dirname "$MOCHIBYTE_DIR")" rev-parse --short HEAD 2>/dev/null || true)"
-    echo "MOCHIBYTE_COMMIT=\"${commit:-unknown}\"" > "$QS_STATE_DIR/version"
-fi
-
 [ -f "$QS_STATE_DIR/quickactions/palettes.json" ] || echo "[]" > "$QS_STATE_DIR/quickactions/palettes.json"

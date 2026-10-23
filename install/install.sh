@@ -55,7 +55,10 @@ bootstrap_installer_deps
 
 INSTALL_STATE=$(detect_install_state)
 TARGET_COMMIT=$(get_target_commit "$PROJECT_ROOT" "$REPO_SLUG")
-OLD_COMMIT=$(get_installed_commit)
+OLD_COMMIT=""
+if [[ "$INSTALL_STATE" == "current" ]]; then
+    OLD_COMMIT=$(get_installed_commit)
+fi
 
 run_installer_ui
 

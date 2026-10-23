@@ -300,7 +300,7 @@ manage_sddm_menu() {
 
     local server
     if server=$(gum choose --label-delimiter="|" --selected="$server_current" \
-        --header="$(t "installer.ui.sddm_server_header")" "$x11_label|x11" "$wayland_label|wayland"); then
+        --header="$(t "installer.ui.sddm_server_header")" "$wayland_label|wayland" "$x11_label|x11"); then
         if [ "$server" = "wayland" ]; then
             SDDM_WAYLAND=true
         else
@@ -336,16 +336,17 @@ run_installer_ui() {
         printf '%s\n\n%s\n' "$header" "$review"
         echo
 
+        # Review and choose first, then act.
         local options=()
+        options+=("$(t "installer.ui.menu_configs")|configs")
+        options+=("$(t "installer.ui.menu_sddm")|sddm")
+        options+=("$(t "installer.ui.menu_packages")|packages")
         if [[ "$INSTALL_STATE" == "current" ]]; then
             options+=("$(t "installer.ui.menu_update")|update")
             options+=("$(t "installer.ui.menu_reinstall")|reinstall")
         else
             options+=("$(t "installer.ui.menu_install")|install")
         fi
-        options+=("$(t "installer.ui.menu_configs")|configs")
-        options+=("$(t "installer.ui.menu_sddm")|sddm")
-        options+=("$(t "installer.ui.menu_packages")|packages")
         options+=("$(t "installer.ui.menu_exit")|exit")
 
         local cursor_label=""

@@ -1357,8 +1357,6 @@
     "title": "Mochibyte",
     "made_by": "Feito por @{author}",
     "welcome": "Boas-vindas",
-    "tagline": "Um shell de desktop feito para",
-    "you": "Você",
     "start_preview": "Iniciar pré-visualização"
   },
   "syspanel": {
@@ -1717,7 +1715,6 @@
       "menu_reinstall": "Reinstalar",
       "menu_install": "Instalar",
       "menu_exit": "Sair",
-      "tagline": "Um shell de desktop feito para você",
       "installed_success": "✔ Mochibyte ({commit}) instalado com sucesso.",
       "failed_packages": "Os seguintes pacotes tiveram erro na instalação:",
       "restart_prompt": "Reinicie o compositor ou execute 'mochibyted start' para começar."

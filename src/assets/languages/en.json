@@ -1385,9 +1385,9 @@
     "title": "Mochibyte",
     "made_by": "Made by @{author}",
     "welcome": "Welcome",
-    "tagline": "A desktop shell built for",
-    "you": "You",
-    "start_preview": "Start preview"
+    "tagline": "A soft, snappy shell for",
+    "start_preview": "Start preview",
+    "highlight": "Hyprland"
   },
   "syspanel": {
     "user": {
@@ -1752,7 +1752,7 @@
       "menu_reinstall": "Reinstall Mochibyte (configs and login screen too)",
       "menu_install": "Install Mochibyte",
       "menu_exit": "Exit",
-      "tagline": "A desktop shell built for you",
+      "tagline": "A soft, snappy shell for Hyprland",
       "installed_success": "✔ Mochibyte ({commit}) installed successfully.",
       "failed_packages": "The following packages encountered errors during installation:",
       "restart_prompt": "Restart your compositor or run 'mochibyted start' to begin.",
@@ -1785,9 +1785,9 @@
       "sddm_keep_none": "Do not set up a login manager",
       "sddm_use": "Use the Mochibyte login screen (SDDM with the Astronaut theme)",
       "sddm_replace_confirm": "{dm} is your current login manager. Disable it from the next boot so SDDM can take over? It stays installed and can be re-enabled later.",
-      "sddm_server_header": "Which display server should the login screen use?",
-      "sddm_server_x11": "X11 (recommended)",
-      "sddm_server_wayland": "Wayland",
+      "sddm_server_header": "Which display server should the login screen use? This only affects the login screen; Hyprland itself always runs on Wayland.",
+      "sddm_server_x11": "X11 (fallback if the Wayland login screen gives you trouble)",
+      "sddm_server_wayland": "Wayland (recommended, uses Weston to show the login screen)",
       "confirm_install": "Install Mochibyte now?",
       "confirm_update": "Update Mochibyte now? Your configs and login screen are left as they are.",
       "confirm_reinstall": "Reinstall Mochibyte now? The selected configs and login screen are set up again, with backups first.",

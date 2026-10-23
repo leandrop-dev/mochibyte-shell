@@ -1210,7 +1210,6 @@
       "package_missing": "الحزمة {pkg} مفقودة",
       "restart_prompt": "أعد تشغيل مدير النوافذ أو نفذ 'mochibyted start' للبدء.",
       "sddm_header": " بدّل الخيارات، ثم اختر تم ",
-      "tagline": "واجهة سطح مكتب صُممت خصيصًا لك",
       "user": "المستخدم الحالي:"
     }
   },
@@ -1541,10 +1540,8 @@
   "start": {
     "made_by": "صُنع بواسطة @{author}",
     "start_preview": "بدء المعاينة",
-    "tagline": "واجهة سطح مكتب صُممت من أجل",
     "title": "Mochibyte",
-    "welcome": "مرحبًا بك",
-    "you": "أنت"
+    "welcome": "مرحبًا بك"
   },
   "sysnotif": {
     "battery": {

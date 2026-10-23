@@ -1380,8 +1380,6 @@
     "title": "Mochibyte",
     "made_by": "Створено @{author}",
     "welcome": "Ласкаво просимо",
-    "tagline": "Оболонка робочого столу, створена для",
-    "you": "вас",
     "start_preview": "Почати попередній перегляд"
   },
   "syspanel": {
@@ -1740,7 +1738,6 @@
       "menu_reinstall": "Перевстановити",
       "menu_install": "Встановити",
       "menu_exit": "Вихід",
-      "tagline": "Оболонка робочого столу, створена для вас",
       "installed_success": "✔ Mochibyte ({commit}) успішно встановлено.",
       "failed_packages": "Під час встановлення таких пакетів виникли помилки:",
       "restart_prompt": "Перезапустіть композитор або виконайте 'mochibyted start' для початку роботи."

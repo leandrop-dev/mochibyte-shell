@@ -389,8 +389,6 @@
     "title": "Mochibyte",
     "made_by": "Stworzone przez @{author}",
     "welcome": "Witaj",
-    "tagline": "Powłoka pulpitu stworzona dla",
-    "you": "Ciebie",
     "start_preview": "Rozpocznij podgląd"
   },
   "syspanel": {
@@ -746,7 +744,6 @@
       "menu_reinstall": "Zainstaluj ponownie",
       "menu_install": "Zainstaluj",
       "menu_exit": "Wyjdź",
-      "tagline": "Powłoka pulpitu stworzona dla Ciebie",
       "installed_success": "✔ Mochibyte ({commit}) zainstalowano pomyślnie.",
       "failed_packages": "Wystąpiły błędy podczas instalacji następujących pakietów:",
       "restart_prompt": "Uruchom ponownie kompozytor lub wpisz 'mochibyted start', aby rozpocząć."

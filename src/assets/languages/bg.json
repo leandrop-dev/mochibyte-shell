@@ -1360,8 +1360,6 @@
     "title": "Mochibyte",
     "made_by": "Създадено от @{author}",
     "welcome": "Добре дошли",
-    "tagline": "Работна среда, създадена за",
-    "you": "Вас",
     "start_preview": "Стартиране на визуализацията"
   },
   "syspanel": {
@@ -1717,7 +1715,6 @@
       "menu_reinstall": "Преинсталиране",
       "menu_install": "Инсталиране",
       "menu_exit": "Изход",
-      "tagline": "Работна среда, създадена за вас",
       "installed_success": "✔ Mochibyte ({commit}) е инсталиран успешно.",
       "failed_packages": "Следните пакети срещнаха грешки по време на инсталацията:",
       "restart_prompt": "Рестартирайте вашия композитор или изпълнете 'mochibyted start', за да започнете."

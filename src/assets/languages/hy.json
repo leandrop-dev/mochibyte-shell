@@ -1357,8 +1357,6 @@
     "title": "Mochibyte",
     "made_by": "Ստեղծել է @{author}",
     "welcome": "Բարի գալուստ",
-    "tagline": "Աշխատասեղանի թաղանթ՝ ստեղծված",
-    "you": "Ձեզ համար",
     "start_preview": "Սկսել նախադիտումը"
   },
   "syspanel": {
@@ -1717,7 +1715,6 @@
       "menu_reinstall": "Վերատեղադրել",
       "menu_install": "Տեղադրել",
       "menu_exit": "Դուրս գալ",
-      "tagline": "Աշխատասեղանի թաղանթ՝ ստեղծված ձեզ համար",
       "installed_success": "✔ Mochibyte ({commit})-ը հաջողությամբ տեղադրվեց։",
       "failed_packages": "Հետևյալ փաթեթների տեղադրման ժամանակ սխալներ առաջացան՝",
       "restart_prompt": "Սկսելու համար վերագործարկեք կոմպոզիտորը կամ կատարեք 'mochibyted start' հրամանը։"

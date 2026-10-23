@@ -1360,8 +1360,6 @@
     "title": "Mochibyte",
     "made_by": "由 @{author} 製作",
     "welcome": "歡迎",
-    "tagline": "專為您量身打造的桌面 Shell",
-    "you": "您",
     "start_preview": "開始預覽"
   },
   "syspanel": {
@@ -1717,7 +1715,6 @@
       "menu_reinstall": "重新安裝",
       "menu_install": "安裝",
       "menu_exit": "結束",
-      "tagline": "為您量身打造的桌面 Shell",
       "installed_success": "✔ Mochibyte ({commit}) 已成功安裝。",
       "failed_packages": "下列套件在安裝過程中發生錯誤：",
       "restart_prompt": "重新啟動您的合成器或執行「mochibyted start」以開始使用。"

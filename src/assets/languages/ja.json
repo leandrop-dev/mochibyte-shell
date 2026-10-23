@@ -386,8 +386,6 @@
     "title": "Mochibyte",
     "made_by": "作成者: @{author}",
     "welcome": "ようこそ",
-    "tagline": "あなたのために作られたデスクトップシェル",
-    "you": "あなた",
     "start_preview": "プレビューを開始"
   },
   "syspanel": {
@@ -743,7 +741,6 @@
       "menu_reinstall": "再インストール",
       "menu_install": "インストール",
       "menu_exit": "終了",
-      "tagline": "あなたのために作られたデスクトップシェル",
       "installed_success": "✔ Mochibyte ({commit}) が正常にインストールされました。",
       "failed_packages": "以下のパッケージのインストール中にエラーが発生しました:",
       "restart_prompt": "開始するにはコンポジターを再起動するか、'mochibyted start' を実行してください。"

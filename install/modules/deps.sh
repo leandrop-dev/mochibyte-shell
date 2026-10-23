@@ -183,11 +183,13 @@ sddm_has_xorg() {
 
 sddm_packages() {
     printf '%s\n' sddm qt6-declarative qt6-svg qt6-virtualkeyboard qt6-multimedia-ffmpeg
-    if [ "$SDDM_WAYLAND" = true ] \
-        && ! find_sddm_binary kwin_wayland >/dev/null \
-        && ! find_sddm_binary weston >/dev/null \
-        && ! sddm_has_xorg; then
-        echo weston
+    # The login screen needs its own display server: Weston for Wayland, Xorg for X11.
+    if [ "$SDDM_WAYLAND" = true ]; then
+        if ! find_sddm_binary kwin_wayland >/dev/null && ! find_sddm_binary weston >/dev/null; then
+            echo weston
+        fi
+    elif ! sddm_has_xorg; then
+        echo xorg-server
     fi
 }
 

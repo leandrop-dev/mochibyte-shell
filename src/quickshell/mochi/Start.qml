@@ -514,7 +514,7 @@ PanelWindow {
 
                     TypewriterText {
                         id: youText
-                        text: I18n.t("start.you")
+                        text: I18n.t("start.highlight")
                         reveal: Math.max(0.0, Math.min(1.0, (window.shellTextReveal - 0.70) * 3.33))
                         font.family: ThemeBackend.fontFamily
                         font.weight: Font.Black

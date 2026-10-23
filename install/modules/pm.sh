@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-PM_SDDM_WAYLAND_DEFAULT=false
+PM_SDDM_WAYLAND_DEFAULT=true
 
 PM_BOOTSTRAP_TOOLS=(gum jq curl git pciutils unzip fontconfig base-devel)
 

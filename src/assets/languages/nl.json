@@ -1360,8 +1360,6 @@
     "title": "Mochibyte",
     "made_by": "Gemaakt door @{author}",
     "welcome": "Welkom",
-    "tagline": "Een desktopshell gebouwd voor",
-    "you": "Jou",
     "start_preview": "Voorbeeld starten"
   },
   "syspanel": {
@@ -1717,7 +1715,6 @@
       "menu_reinstall": "Opnieuw installeren",
       "menu_install": "Installeren",
       "menu_exit": "Afsluiten",
-      "tagline": "Een desktopshell gebouwd voor jou",
       "installed_success": "✔ Mochibyte ({commit}) succesvol geïnstalleerd.",
       "failed_packages": "De volgende pakketten hebben fouten ondervonden tijdens de installatie:",
       "restart_prompt": "Herstart uw compositor of voer 'mochibyted start' uit om te beginnen."

@@ -1351,8 +1351,6 @@
     "title": "Mochibyte",
     "made_by": "Hazırlayan: @{author}",
     "welcome": "Xoş gəlmisiniz",
-    "tagline": "Bu iş masası mühitinin hazırlandığı şəxs",
-    "you": "Sizsiniz",
     "start_preview": "Önbaxışı başlat"
   },
   "syspanel": {
@@ -1711,7 +1709,6 @@
       "menu_reinstall": "Yenidən quraşdır",
       "menu_install": "Quraşdır",
       "menu_exit": "Çıx",
-      "tagline": "Sizin üçün hazırlanmış iş masası mühiti",
       "installed_success": "✔ Mochibyte ({commit}) uğurla quraşdırıldı.",
       "failed_packages": "Aşağıdakı paketlərin quraşdırılması zamanı xətalar baş verdi:",
       "restart_prompt": "Başlamaq üçün görüntü birləşdiricisini yenidən başladın və ya 'mochibyted start' əmrini icra edin."

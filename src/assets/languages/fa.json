@@ -1360,8 +1360,6 @@
     "title": "Mochibyte",
     "made_by": "ساخته‌شده توسط @{author}",
     "welcome": "خوش‌آمدید",
-    "tagline": "یک پوسته میزکار ساخته‌شده برای",
-    "you": "شما",
     "start_preview": "شروع پیش‌نمایش"
   },
   "syspanel": {
@@ -1717,7 +1715,6 @@
       "menu_reinstall": "نصب مجدد",
       "menu_install": "نصب",
       "menu_exit": "خروج",
-      "tagline": "یک پوسته میزکار ساخته‌شده برای شما",
       "installed_success": "✔ Mochibyte ({commit}) با موفقیت نصب شد.",
       "failed_packages": "بسته‌های زیر در حین نصب با خطا مواجه شدند:",
       "restart_prompt": "برای شروع، کامپوزیتور خود را مجدداً راه‌اندازی کنید یا دستور 'mochibyted start' را اجرا کنید."

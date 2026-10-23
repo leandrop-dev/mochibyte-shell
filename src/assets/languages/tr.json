@@ -1360,8 +1360,6 @@
     "title": "Mochibyte",
     "made_by": "@{author} tarafından yapıldı",
     "welcome": "Hoş Geldiniz",
-    "tagline": "Şunun için oluşturulmuş bir masaüstü kabuğu:",
-    "you": "Siz",
     "start_preview": "Önizlemeyi başlat"
   },
   "syspanel": {
@@ -1717,7 +1715,6 @@
       "menu_reinstall": "Yeniden yükle",
       "menu_install": "Yükle",
       "menu_exit": "Çıkış",
-      "tagline": "Sizin için oluşturulmuş bir masaüstü kabuğu",
       "installed_success": "✔ Mochibyte ({commit}) başarıyla kuruldu.",
       "failed_packages": "Aşağıdaki paketler kurulum sırasında hatalarla karşılaştı:",
       "restart_prompt": "Başlamak için birleştiricinizi yeniden başlatın veya 'mochibyted start' komutunu çalıştırın."

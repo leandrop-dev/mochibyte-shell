@@ -1401,8 +1401,6 @@
     "title": "Mochibyte",
     "made_by": "Hecho por @{author}",
     "welcome": "Bienvenido",
-    "tagline": "Un entorno de escritorio creado para",
-    "you": "ti",
     "start_preview": "Iniciar vista previa"
   },
   "syspanel": {
@@ -1761,7 +1759,6 @@
       "menu_reinstall": "Reinstalar",
       "menu_install": "Instalar",
       "menu_exit": "Salir",
-      "tagline": "Un entorno de escritorio creado para ti",
       "installed_success": "✔ Mochibyte ({commit}) instalado con éxito.",
       "failed_packages": "Los siguientes paquetes encontraron errores durante la instalación:",
       "restart_prompt": "Reinicia tu compositor o ejecuta 'mochibyted start' para comenzar."
