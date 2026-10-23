@@ -1809,7 +1809,11 @@
       "install_ok": "Successfully installed {pkg}",
       "install_failed": "Failed to install {pkg}",
       "quickshell_outdated": "Quickshell {version} is too old, {minimum} or newer is required. Upgrading...",
-      "quickshell_still_old": "Quickshell is still older than {minimum}. Update it manually, otherwise settings will not open."
+      "quickshell_still_old": "Quickshell is still older than {minimum}. Update it manually, otherwise settings will not open.",
+      "aur_helper_header": "No AUR helper found. A few packages come from the AUR, so one is needed. Which would you like?",
+      "aur_helper_yay": "yay   the most widely used AUR helper",
+      "aur_helper_paru": "paru  feature-rich AUR helper written in Rust",
+      "aur_helper_cancelled": "No AUR helper chosen. The installer needs one for AUR packages, so it stops here."
     },
     "deploy": {
       "configuring_sddm": "Configuring SDDM display manager...",

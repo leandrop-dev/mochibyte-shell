@@ -18,14 +18,29 @@ pm_bootstrap_install() {
 }
 
 pm_bootstrap_helper() {
-    if ! command -v yay &>/dev/null && ! command -v paru &>/dev/null; then
-        local cache_build="${XDG_CACHE_HOME:-"$HOME/.cache"}/mochibyte-yay-bin"
-        rm -rf "$cache_build"
-        mkdir -p "$cache_build"
-        git clone https://aur.archlinux.org/yay-bin.git "$cache_build"
-        (cd "$cache_build" && makepkg -si --noconfirm)
-        rm -rf "$cache_build"
+    if command -v yay &>/dev/null || command -v paru &>/dev/null; then
+        return 0
     fi
+
+    local helper
+    if ! helper=$(gum choose --label-delimiter="|" --header="$(t "installer.deps.aur_helper_header")" \
+        "$(t "installer.deps.aur_helper_yay")|yay" "$(t "installer.deps.aur_helper_paru")|paru"); then
+        echo "$(t "installer.deps.aur_helper_cancelled")" >&2
+        exit 1
+    fi
+
+    # Prefer a repo build when the distro ships one (CachyOS does), otherwise build the -bin package from the AUR.
+    if pacman -Si "$helper" &>/dev/null; then
+        sudo pacman -S --noconfirm --needed "$helper"
+        return 0
+    fi
+
+    local cache_build="${XDG_CACHE_HOME:-"$HOME/.cache"}/mochibyte-$helper-bin"
+    rm -rf "$cache_build"
+    mkdir -p "$cache_build"
+    git clone "https://aur.archlinux.org/$helper-bin.git" "$cache_build"
+    (cd "$cache_build" && makepkg -si --noconfirm)
+    rm -rf "$cache_build"
 }
 
 pm_full_upgrade() {
